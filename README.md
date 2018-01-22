@@ -3,11 +3,11 @@
 Use your voice input to issue Unix shell commands. Uses the Google Speech Recognition API. Work in progress!
 
 ## Requirements
-Node.js
-SoX
+* Node.js
+* SoX
 
 ## Setup
-npm i
+`npm i`
 
 ## To run:
-./listen.js
+`./listen.js`
