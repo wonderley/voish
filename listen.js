@@ -3,13 +3,14 @@
 'use strict';
 
 const execSync = require('child_process').execSync;
+const aCommandsAndPhrases = [
+  [executeCommand.bind(this, 'ls'), ['show files', 'show all files', 'list', 'list files']],
+  [executeCommand.bind(this, 'pwd'), ['current directory', 'path', 'show path', 'show current directory']],
+  [stop, ['stop', 'quit', 'exit']],
+  [copy, ['copy']],
+]
 
 function streamingMicRecognize(encoding, sampleRateHertz, languageCode) {
-  const aCommandsAndPhrases = [
-    ['ls', ['show files', 'show all files', 'list', 'list files']],
-    ['pwd', ['current directory', 'path', 'show path', 'show current directory']],
-    ['stop', ['stop', 'quit', 'exit']],
-  ]
   const aPhrases = aCommandsAndPhrases.map(aCommandAndPhrase => aCommandAndPhrase[1]).reduce(
     // flatten
     function(a, b) {
@@ -55,18 +56,10 @@ function streamingMicRecognize(encoding, sampleRateHertz, languageCode) {
         console.log('multiple data responses received! Using the first.');
       }
       // Use the first alternative. TODO - check multiple alternatives
-      const sTranscription = data.results[0].alternatives[0].transcript.trim().toLowerCase();
-      console.log(`Transcription: ${sTranscription}`);
-      const aCommand = aCommandsAndPhrases
-        .find(aCommandTemplate => aCommandTemplate[1].includes(sTranscription));
-      if (aCommand) {
-        const sCommand = aCommand[0];
-        if (sCommand === 'stop') {
-          process.exit(0);
-        }
-        const sResult = execSync(sCommand).toString();
-        sResult && console.log(sResult);
-      }
+      const sTranscript = data.results[0].alternatives[0].transcript.trim().toLowerCase();
+      console.log(`Transcript: ${sTranscript}`);
+      const fIntent = transcriptToIntent(sTranscript);
+      fIntent && fIntent(sTranscript);
     });
 
   // Start recording and send the microphone input to the Speech API
@@ -85,8 +78,29 @@ function streamingMicRecognize(encoding, sampleRateHertz, languageCode) {
   console.log('Listening, press Ctrl+C or say "stop" to stop.');
 }
 
+function transcriptToIntent(sTranscript) {
+  const aFoundCommand = aCommandsAndPhrases.find(aCommandTemplate => {
+    return aCommandTemplate[1].includes(sTranscript);
+  });
+  if (aFoundCommand) return aFoundCommand[0];
+  // More loose search
+  const aFoundCommand2 = aCommandsAndPhrases.find(aCommandTemplate => {
+    return sTranscript.includes(aCommandTemplate[1]);
+  });
+  return aFoundCommand2[0];
+}
+
+function copy(sTranscript) {
+  console.log(`copy command with transcript ${sTranscript}`);
+}
+
 function stop() {
   process.exit(0);
+}
+
+function executeCommand(sCommand) {
+  const sResult = execSync(sCommand).toString();
+  sResult && console.log(sResult);
 }
 
 const argv = require(`yargs`)
